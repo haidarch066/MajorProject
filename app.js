@@ -5,6 +5,7 @@ const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require('ejs-mate');
+const wrapAsync = require('./utils/wrapAsync.js');
 const port = 8080;
 
 app.set("view engine", "ejs");
@@ -32,20 +33,6 @@ app.get("/", (req, res)=>{
    res.send("root");
 });
 
-// app.get("/testListing", async (req, res) => {
-//   let sampleListing = new Listing({
-//     title: "My New Villa",
-//     description: "By the beach",
-//     price: 1200,
-//     location: "Calangute, Goa",
-//     country: "India"
-//   });
-
-//   await sampleListing.save();
-//   console.log("sample was saved");
-//   res.send("successful testing");
-// });
-
 //index route
 app.get("/listings", async (req, res)=>{
    let allListings = await Listing.find();
@@ -53,23 +40,23 @@ app.get("/listings", async (req, res)=>{
 });
 
 //new route
-app.get("/listings/new", async (req, res)=>{
+app.get("/listings/new", (async (req, res)=>{
    res.render("listings/new.ejs");
-});
+}));
 
 //new route
-app.post("/listings", async (req, res)=>{
-   let {title, description, price, location, country} = req.body;
-   const data = new Listing({
-      title : title,
-      description : description,
-      price : price,
-      location : location,
-      country : country
-   });
-   await data.save();
-   res.redirect("/listings");
-});
+app.post("/listings", wrapAsync( async (req, res, next)=>{  
+      let {title, description, price, location, country} = req.body;
+      const data = new Listing({
+         title : title,
+         description : description,
+         price : price,
+         location : location,
+         country : country
+      });
+      await data.save();
+      res.redirect("/listings"); 
+}));
 
 //show route
 app.get("/listings/:id", async (req, res)=>{
@@ -98,4 +85,9 @@ app.delete("/listings/:id", async (req, res)=>{
    let {id} = req.params;
    await Listing.findByIdAndDelete(id);
    res.redirect(`/listings`);
+});
+
+//error handler middleware
+app.use((err, req, res, next)=>{
+    res.send("Something went wrong");
 });
